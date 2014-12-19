@@ -6,9 +6,11 @@ VERSION = '2.0.2'
 
 from logentries import helpers as le_helpers
 
+import json
 import logging
 import threading
 import socket
+import sys
 import random
 import time
 
@@ -138,3 +140,68 @@ class LogentriesHandler(logging.Handler):
 
     def close(self):
         logging.Handler.close(self)
+
+
+class LogentriesFormatter(logging.Formatter):
+    def __init__(self):
+        self.host = socket.gethostname()
+
+    def format(self, record):
+        message = {
+            'message': record.getMessage(),
+            'host': self.host,
+            'path': record.pathname,
+            'levelname': record.levelname,
+            'logger': record.name
+        }
+
+        message.update(self.get_extra_fields(record))
+
+        if record.exc_info:
+            message.update(self.get_debug_fields(record))
+
+        return json.dumps(message)
+
+    def get_extra_fields(self, record):
+        # The list contains all the attributes listed in
+        # http://docs.python.org/library/logging.html#logrecord-attributes
+        skip_list = (
+            'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
+            'funcName', 'id', 'levelname', 'levelno', 'lineno', 'module',
+            'msecs', 'msecs', 'message', 'msg', 'name', 'pathname', 'process',
+            'processName', 'relativeCreated', 'thread', 'threadName', 'extra'
+        )
+
+        if sys.version_info < (3, 0):
+            easy_types = (basestring, bool, dict, float, int, list, type(None))
+        else:
+            easy_types = (str, bool, dict, float, int, list, type(None))
+
+        fields = {}
+
+        for key, value in record.__dict__.items():
+            if key not in skip_list:
+                if isinstance(value, easy_types):
+                    fields[key] = value
+                else:
+                    fields[key] = repr(value)
+
+        return fields
+
+    def get_debug_fields(self, record):
+        fields = {
+            'exc_info': self.formatException(record.exc_info),
+            'lineno': record.lineno,
+            'process': record.process,
+            'threadName': record.threadName,
+        }
+
+        # funcName was added in 2.5
+        if not getattr(record, 'funcName', None):
+            fields['funcName'] = record.funcName
+
+        # processName was added in 2.6
+        if not getattr(record, 'processName', None):
+            fields['processName'] = record.processName
+
+        return fields
