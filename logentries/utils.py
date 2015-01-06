@@ -6,6 +6,7 @@ VERSION = '2.0.2'
 
 from logentries import helpers as le_helpers
 
+from datetime import datetime
 import json
 import logging
 import threading
@@ -31,8 +32,6 @@ INVALID_TOKEN = ("\n\nIt appears the LOGENTRIES_TOKEN "
                  "parameter you entered is incorrect!\n\n")
 # Unicode Line separator character   \u2028
 LINE_SEP = le_helpers.to_unicode('\u2028')
-# Library Identifier to be sent to server to identify python lib
-LIBRARY_IDENTIFIER = "###P01### - Library Initialised"
 
 
 def dbg(msg):
@@ -70,7 +69,7 @@ class SocketAppender(threading.Thread):
             try:
                 time.sleep(wait_for)
             except KeyboardInterrupt:
-                raise 
+                raise
 
     def closeConnection(self):
         if self._conn is not None:
@@ -121,8 +120,6 @@ class LogentriesHandler(logging.Handler):
         self.setFormatter(format)
         self.setLevel(logging.DEBUG)
         self._thread = SocketAppender()
-        # Add idenfiter to queue to be sent first on startup
-        self._thread._queue.put(self.token + LIBRARY_IDENTIFIER + '\n')
 
     @property
     def _started(self):
@@ -152,7 +149,8 @@ class LogentriesFormatter(logging.Formatter):
             'host': self.host,
             'path': record.pathname,
             'levelname': record.levelname,
-            'logger': record.name
+            'logger': record.name,
+            'time': datetime.utcnow().isoformat()
         }
 
         message.update(self.get_extra_fields(record))
