@@ -120,6 +120,7 @@ class LogentriesHandler(logging.Handler):
         self.setFormatter(format)
         self.setLevel(logging.DEBUG)
         self._thread = SocketAppender()
+        self._thread_control = threading.Lock()
 
     @property
     def _started(self):
@@ -128,7 +129,9 @@ class LogentriesHandler(logging.Handler):
     def emit(self, record):
         if not self._started and self.good_config:
             dbg("Starting Logentries Asynchronous Socket Appender")
-            self._thread.start()
+            with self._thread_control:
+                if not self._started:
+                    self._thread.start()
 
         msg = self.format(record).rstrip('\n')
         msg = self.token + msg
