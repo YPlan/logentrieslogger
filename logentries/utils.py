@@ -150,7 +150,6 @@ class LogentriesFormatter(logging.Formatter):
         message = {
             'message': record.getMessage(),
             'host': self.host,
-            'path': record.pathname,
             'levelname': record.levelname,
             'logger': record.name,
             'time': datetime.utcnow().isoformat()
